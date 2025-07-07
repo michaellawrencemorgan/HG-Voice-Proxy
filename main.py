@@ -10,7 +10,7 @@ VOICE_ID = "TIFcRUNcZnleeEhIlso8"  # Ileydrian Deacon
 
 @app.route("/")
 def home():
-    return jsonify({"message": "🕊️ Holy Ghost Global ElevenLabs Proxy is running!"})
+    return jsonify({"message": "🕊️ HG ElevenLabs Proxy is running!"})
 
 @app.route("/speak", methods=["POST"])
 def speak():
