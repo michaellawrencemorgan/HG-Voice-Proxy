@@ -3,26 +3,32 @@ import requests
 import os
 import io
 import uuid
+import json
 import firebase_admin
 from firebase_admin import credentials, storage
 
 app = Flask(__name__)
 
-# 🔐 Load Firebase Admin SDK credentials
-cred = credentials.Certificate("firebase-adminsdk.json")  # Make sure this file is in the same folder
+# 🔐 Load Firebase credentials from environment variable
+firebase_json = os.environ.get("FIREBASE_KEY_JSON")
+if not firebase_json:
+    raise ValueError("Missing FIREBASE_KEY_JSON environment variable")
+
+cred_dict = json.loads(firebase_json)
+cred = credentials.Certificate(cred_dict)
 firebase_admin.initialize_app(cred, {
-    "storageBucket": "hg-voice.appspot.com"  # Replace with your actual bucket name
+    "storageBucket": "hg-voice.appspot.com"  # Replace with your actual bucket name if different
 })
 
-# 🔊 ElevenLabs voice settings
-ELEVENLABS_API_KEY = "your-elevenlabs-api-key"  # Replace with your actual ElevenLabs API key
+# 🎙️ ElevenLabs config
+ELEVENLABS_API_KEY = os.environ.get("ELEVENLABS_API_KEY")
 VOICE_ID = "TIFcRUNcZnleeEhIlso8"  # Ileydrian Deacon voice
 
 @app.route("/")
 def home():
     return jsonify({"message": "🕊️ Holy Ghost Voice Proxy is running!"})
 
-# 📤 Upload mp3 bytes to Firebase and return a public URL
+# 📤 Upload audio to Firebase
 def upload_mp3_to_firebase(mp3_bytes, filename):
     bucket = storage.bucket()
     blob = bucket.blob(f"voices/{filename}")
@@ -30,7 +36,7 @@ def upload_mp3_to_firebase(mp3_bytes, filename):
     blob.make_public()
     return blob.public_url
 
-# 🎙️ /speak route to convert text to speech and upload to Firebase
+# 🔊 Convert text to speech and return Firebase URL
 @app.route("/speak", methods=["POST"])
 def speak():
     data = request.json
@@ -70,9 +76,10 @@ def speak():
         "audio_url": public_url
     })
 
-# 🚀 Required for Render deployment and local dev
+# 🌐 For Render deployment
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
+
 
 
