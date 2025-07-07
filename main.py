@@ -1,10 +1,11 @@
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify, send_file
 import requests
 import os
+import uuid
 
 app = Flask(__name__, static_folder=".")
 
-# 🔐 Hardcoded API key and voice ID (for testing only)
+# 🔐 Hardcoded API key and voice ID (for testing only — move to env vars in production)
 ELEVENLABS_API_KEY = "sk_15e22f0a744a31ed96339c9f5bd2cc2c3e864afa088d7f92"
 VOICE_ID = "TIFcRUNcZnleeEhIlso8"  # Ileydrian Deacon
 
@@ -29,32 +30,39 @@ def speak():
         "text": text,
         "model_id": "eleven_monolingual_v1",
         "voice_settings": {
-            "stability": 0.75,
+            "stability": 0.4,
             "similarity_boost": 0.75
         }
     }
 
-    tts_url = f"https://api.elevenlabs.io/v1/text-to-speech/{VOICE_ID}"
-    response = requests.post(tts_url, json=payload, headers=headers)
+    response = requests.post(
+        f"https://api.elevenlabs.io/v1/text-to-speech/{VOICE_ID}",
+        headers=headers,
+        json=payload
+    )
 
-    if response.status_code == 200:
-        return response.content, 200, {
-            "Content-Type": "audio/mpeg",
-            "Content-Disposition": "inline; filename=voice.mp3"
-        }
+    if response.status_code != 200:
+        return jsonify({"error": "Failed to generate speech"}), 500
+
+    # Save the audio to static/audio/<uuid>.mp3
+    audio_id = str(uuid.uuid4())
+    audio_folder = "./static/audio"
+    os.makedirs(audio_folder, exist_ok=True)
+    file_path = os.path.join(audio_folder, f"{audio_id}.mp3")
+
+    with open(file_path, "wb") as f:
+        f.write(response.content)
+
+    return jsonify({
+        "audio_url": f"https://hg-voice-proxy.onrender.com/playback/{audio_id}"
+    })
+
+@app.route("/playback/<audio_id>", methods=["GET"])
+def playback(audio_id):
+    file_path = f"./static/audio/{audio_id}.mp3"
+    if os.path.exists(file_path):
+        return send_file(file_path, mimetype="audio/mpeg")
     else:
-        print("❌ ElevenLabs API Error:", response.status_code, response.text)
-        return jsonify({
-            "error": "Failed to call ElevenLabs",
-            "details": response.text
-        }), 500
+        return jsonify({"error": "Audio not found"}), 404
 
-# ✅ Serve privacy.html from root directory
-@app.route("/privacy.html")
-def serve_privacy():
-    return send_from_directory(".", "privacy.html")
-
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port)
 
