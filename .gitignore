@@ -1,0 +1,8 @@
+# Ignore Firebase private key 
+firebase-adminsdk.json 
+
+#Ignore Python cache 
+__pycache__/ 
+
+#Optional: Ignore system files 
+.DS_Store 
