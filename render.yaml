@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: hg-voice
+    env: python
+    buildCommand: ""
+    startCommand: "python main.py"
+    plan: free
