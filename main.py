@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_file
 import requests
 import os
 import io
@@ -17,10 +17,10 @@ if not firebase_json:
 cred_dict = json.loads(firebase_json)
 cred = credentials.Certificate(cred_dict)
 firebase_admin.initialize_app(cred, {
-    "storageBucket": "hg-voice.appspot.com"  # Replace with your actual bucket name if different
+    "storageBucket": "hg-voice.firebasestorage.app"
 })
 
-# 🎙️ ElevenLabs config
+# 🔊 ElevenLabs credentials
 ELEVENLABS_API_KEY = os.environ.get("ELEVENLABS_API_KEY")
 VOICE_ID = "TIFcRUNcZnleeEhIlso8"  # Ileydrian Deacon voice
 
@@ -28,7 +28,7 @@ VOICE_ID = "TIFcRUNcZnleeEhIlso8"  # Ileydrian Deacon voice
 def home():
     return jsonify({"message": "🕊️ Holy Ghost Voice Proxy is running!"})
 
-# 📤 Upload audio to Firebase
+# 📤 Upload mp3 to Firebase
 def upload_mp3_to_firebase(mp3_bytes, filename):
     bucket = storage.bucket()
     blob = bucket.blob(f"voices/{filename}")
@@ -36,7 +36,7 @@ def upload_mp3_to_firebase(mp3_bytes, filename):
     blob.make_public()
     return blob.public_url
 
-# 🔊 Convert text to speech and return Firebase URL
+# 🎙️ Convert text to speech and return audio URL
 @app.route("/speak", methods=["POST"])
 def speak():
     data = request.json
@@ -76,7 +76,7 @@ def speak():
         "audio_url": public_url
     })
 
-# 🌐 For Render deployment
+# 🌐 Render deployment entry point
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
